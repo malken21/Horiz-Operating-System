@@ -4,18 +4,18 @@ version = 4
 
 [[package]]
 name = "horiz-init"
-version = "0.2.0"
+version = "0.4.3"
 dependencies = [
  "libc",
 ]
 
 [[package]]
 name = "horiz-sh"
-version = "0.2.0"
+version = "0.4.3"
 
 [[package]]
 name = "horiz-utils"
-version = "0.2.0"
+version = "0.4.3"
 
 [[package]]
 name = "libc"
