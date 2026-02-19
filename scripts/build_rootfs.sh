@@ -53,6 +53,15 @@ if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
     cp /etc/ssl/certs/ca-certificates.crt "$ROOTFS_DIR/etc/ssl/certs/"
 fi
 
+# 権限設定の強化 (VULN-004 の解消)
+echo "[報告] ファイル権限を強化中..."
+chmod 600 "$ROOTFS_DIR/etc/shadow"
+chmod 644 "$ROOTFS_DIR/etc/passwd"
+chmod 700 "$ROOTFS_DIR/root"
+chmod 755 "$ROOTFS_DIR/bin"/*
+chmod 755 "$ROOTFS_DIR/etc/horiz"
+chmod 644 "$ROOTFS_DIR/etc/horiz/pubkey"
+
 echo "[報告] Rootfs パッケージング中..."
 cd "$ROOTFS_DIR"
 tar czf ../../horizos-rootfs.tar.gz .

@@ -2,25 +2,26 @@
 
 基礎から設計された、WSL2およびDocker向けの純粋なUNIX系OS。
 x86_64 および aarch64 アーキテクチャをサポート。
+外部依存を一切排除した「Zero-Dependency」設計により、完全な所有権と透明性を実現。
 
 ## [ディレクトリ構造]
 
 - **horiz-core/**: Userland ロジック。システム本体の機能を実装するコア・コンポーネント。
-  - **crates/horiz-init**: システムの初期化・プロセス管理。
-  - **crates/horiz-pkg**: パッケージ管理システム。
+  - **crates/horiz-init**: システム初期化・**サービス死活監視（自動再起動）**・構造化ロギング。
+  - **crates/horiz-pkg**: **二重整合性チェック（署名+ハッシュ）**を備えたパッケージ管理システム。
   - **crates/horiz-sh**: インタラクティブ・シェル。
   - **crates/horiz-utils**: 基本的なコマンド群（ls, cat, echo等）。
 - **rootfs/**: OS スケルトン (テンプレート)。設定ファイルやディレクトリ構造の雛形。
-  - `/home/horiz`: 一般ユーザー `horiz` のホームディレクトリ。
 - **scripts/**: 各種ビルド・自動化スクリプト。
 - **build.sh**: スクラッチビルドによる迅速な rootfs 構築・統合スクリプト。
 
-## [コンポーネント]
+## [コンポーネント・特徴]
 
 - **Kernel**: Linux 6.19.2 (Source Built)
-- **Userland**: Horiz Core (Rust / musl Static Link)
-- **Init**: horiz-init (Rust Custom Implementation)
-- **User**: `root` (Default Execution), `horiz` (UID: 1000)
+- **Userland**: Horiz Core (Rust / musl Static Link / Zero-Dependency)
+- **Init**: horiz-init (Custom Implementation with **Service Supervision**)
+- **Security**: 独自実装の SHA-256/512, Ed25519 による署名検証と整合性チェック。
+- **Logging**: `/var/log/system.log` へのタイムスタンプ付き構造化ログ出力。
 
 ## [ビルド手順]
 

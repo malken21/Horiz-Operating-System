@@ -3,6 +3,7 @@ members = [
     "crates/horiz-init", "crates/horiz-pkg",
     "crates/horiz-sh",
     "crates/horiz-utils",
+    "crates/horiz-auth",
 ]
 resolver = "2"
 

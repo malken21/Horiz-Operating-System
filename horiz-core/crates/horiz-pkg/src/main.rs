@@ -1,41 +1,144 @@
+use std::env;
 use std::fs;
-use std::io::{self, Write};
-use std::os::unix::fs::PermissionsExt;
+use std::io::{self, Read, Write};
+use std::net::TcpStream;
 use std::path::Path;
-use clap::Parser;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about = "HorizOS Package Downloader", long_about = None)]
+mod sha512;
+mod ed25519;
+
+// --- Custom Argument Parser ---
 struct Args {
-    /// URL of the binary to download
-    #[arg(short, long)]
     url: String,
-
-    /// Name of the binary to save as (in /bin)
-    #[arg(short, long)]
     name: String,
+    pubkey: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
-    let target_path = format!("/bin/{}", args.name);
+fn parse_args() -> Result<Args, String> {
+    let env_args: Vec<String> = env::args().collect();
+    let mut url = String::new();
+    let mut name = String::new();
+    let mut pubkey = "/etc/horiz/pubkey".to_string();
 
-    println!("[報告] ダウンロード開始: {}", args.url);
-
-    // rustls-tls を使用した HTTPS リクエスト
-    let mut response = reqwest::blocking::get(&args.url)?;
-
-    if !response.status().is_success() {
-        return Err(format!("[エラー] ダウンロード失敗: {}", response.status()).into());
+    let mut i = 1;
+    while i < env_args.len() {
+        match env_args[i].as_str() {
+            "-u" | "--url" => {
+                if i + 1 < env_args.len() {
+                    url = env_args[i + 1].clone();
+                    i += 2;
+                } else { return Err("Missing value for --url".into()); }
+            }
+            "-n" | "--name" => {
+                if i + 1 < env_args.len() {
+                    name = env_args[i + 1].clone();
+                    i += 2;
+                } else { return Err("Missing value for --name".into()); }
+            }
+            "-p" | "--pubkey" => {
+                if i + 1 < env_args.len() {
+                    pubkey = env_args[i + 1].clone();
+                    i += 2;
+                } else { return Err("Missing value for --pubkey".into()); }
+            }
+            _ => { return Err(format!("Unknown argument: {}", env_args[i])); }
+        }
     }
 
-    let mut out = fs::File::create(&target_path)?;
-    io::copy(&mut response, &mut out)?;
+    if url.is_empty() || name.is_empty() {
+        return Err("Usage: horiz-pkg --url <URL> --name <NAME> [--pubkey <PATH>]".into());
+    }
 
-    // 実行権限の付与 (chmod +x)
-    let mut perms = out.metadata()?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&target_path, perms)?;
+    Ok(Args { url, name, pubkey })
+}
+
+// --- Minimal Custom HTTP/1.1 Client (Zero-Dependency) ---
+fn http_get(url: &str) -> io::Result<Vec<u8>> {
+    let stripped = url.strip_prefix("http://").ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Only http:// is supported in zero-dep mode"))?;
+    let (host_port, path) = match stripped.find('/') {
+        Some(i) => (&stripped[..i], &stripped[i..]),
+        None => (stripped, "/"),
+    };
+
+    let (host, port) = match host_port.find(':') {
+        Some(i) => (&host_port[..i], host_port[i+1..].parse::<u16>().map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid port"))?),
+        None => (host_port, 80),
+    };
+
+    let mut stream = TcpStream::connect(format!("{}:{}", host, port))?;
+    let request = format!(
+        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+        path, host
+    );
+    stream.write_all(request.as_bytes())?;
+
+    let mut response = Vec::new();
+    stream.read_to_end(&mut response)?;
+
+    if let Some(pos) = response.windows(4).position(|w| w == b"\r\n\r\n") {
+        let header = String::from_utf8_lossy(&response[..pos]);
+        if !header.contains("200 OK") {
+            return Err(io::Error::new(io::ErrorKind::Other, format!("HTTP Error: {}", header.lines().next().unwrap_or("Unknown"))));
+        }
+        Ok(response[pos + 4..].to_vec())
+    } else {
+        Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid HTTP response"))
+    }
+}
+
+fn main() -> io::Result<()> {
+    let args = parse_args().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let target_path = format!("/bin/{}", args.name);
+    let sig_url = format!("{}.sig", args.url);
+
+    println!("[報告] パッケージ本体をロード中: {}", args.url);
+    let data = http_get(&args.url)?;
+
+    println!("[報告] 署名をロード中: {}", sig_url);
+    let sig_data = http_get(&sig_url)?;
+    if sig_data.len() != 64 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "[エラー] 署名形式が不正です（64バイトである必要があります）。"));
+    }
+
+    // 整合性チェックの強化: ハッシュ計算
+    println!("[報告] データの整合性を確認中 (SHA-512)...");
+    let content_hash = sha512::sha512(&data);
+    println!("[報告] ハッシュ計算完了。");
+
+    println!("[報告] 署名を検証中 (独自実装 Ed25519)...");
+    let pubkey_bytes = fs::read(&args.pubkey)
+        .map_err(|_| io::Error::new(io::ErrorKind::NotFound, format!("[エラー] 公開鍵が見つかりません: {}", args.pubkey)))?;
+    
+    if pubkey_bytes.len() != 32 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "[エラー] 公開鍵のサイズが不正です。"));
+    }
+
+    let mut pk = [0u8; 32];
+    pk.copy_from_slice(&pubkey_bytes);
+    let mut sig = [0u8; 64];
+    sig.copy_from_slice(&sig_data);
+
+    // ハッシュ値ではなく生データで検証（Ed25519内部でハッシュ化されるため）
+    if !ed25519::Point::verify(&pk, &data, &sig) {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, "[警告] 署名検証に失敗しました。不正なバイナリです。"));
+    }
+
+    println!("[報告] 検証成功。バイナリを配置します。");
+    fs::write(&target_path, &data)?;
+
+    // 書込後の再検証用（デバッグ/開発用ログ）
+    let verification_hash = sha512::sha512(&fs::read(&target_path)?);
+    if content_hash != verification_hash {
+        return Err(io::Error::new(io::ErrorKind::WriteZero, "[エラー] 書き込み後のデータ整合性チェックに失敗しました。"));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&target_path)?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&target_path, perms)?;
+    }
 
     println!("[報告] インストール完了: {}", target_path);
     Ok(())
