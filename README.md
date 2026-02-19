@@ -4,14 +4,14 @@
 
 ## [ディレクトリ構造]
 
-- **horiz-core/**: Userland ロジック (Rust)。システム本体の機能を実装するコア・コンポーネント。
+- **horiz-core/**: Userland ロジック。システム本体の機能を実装するコア・コンポーネント。
 - **rootfs/**: OS スケルトン (テンプレート)。設定ファイルやディレクトリ構造の雛形。
 - **scripts/**: 各種ビルド・自動化スクリプト。
 
 ## [コンポーネント]
 
 - **Kernel**: Linux 6.19.2 (Source Built)
-- **Userland**: Horiz-Core (Rust / Source Built / Static Link)
+- **Userland**: Horiz Core (Source Built / Static Link)
 - **Init**: horiz-init (Rust Custom Implementation)
 
 ## [ビルド手順]

@@ -2,7 +2,7 @@
 
 set -e
 
-echo "[報告] Rust 版 Userland (Horiz-Core) ビルドプロセスを開始。"
+echo "[報告] Userland (Horiz Core) ビルドプロセスを開始。"
 
 cd horiz-core
 

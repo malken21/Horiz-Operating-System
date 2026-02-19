@@ -26,7 +26,7 @@ fn mount_fs(source: &str, target: &str, fstype: &str, flags: u64) {
 }
 
 fn main() {
-    println!("--- HorizOS (Rust Core) Initializing ---");
+    println!("--- HorizOS Core Initializing ---");
 
     // 1. 仮想ファイルシステムのマウント
     mount_fs("proc", "/proc", "proc", 0);

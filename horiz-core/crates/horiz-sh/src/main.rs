@@ -4,7 +4,7 @@ use std::path::Path;
 use std::env;
 
 fn main() {
-    println!("Welcome to Horiz-sh (Rust)");
+    println!("Welcome to Horiz-sh");
 
     loop {
         print!("horizos-rs# ");
