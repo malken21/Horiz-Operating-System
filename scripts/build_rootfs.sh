@@ -11,7 +11,7 @@ rm -rf "$ROOTFS_DIR"
 mkdir -p "$ROOTFS_DIR"
 
 # 必須ディレクトリの作成 (FHS 準拠)
-mkdir -p "$ROOTFS_DIR"/{bin,dev,etc,proc,sys,tmp,var,root}
+mkdir -p "$ROOTFS_DIR"/{bin,dev,etc,proc,sys,tmp,var,root,home/horiz}
 
 # Rustバイナリのビルド (musl ターゲットでスタティックリンク)
 RUST_TARGET="x86_64-unknown-linux-musl"
@@ -30,9 +30,11 @@ TARGET_DIR="horiz-core/target/${RUST_TARGET}/release"
 
 cp "${TARGET_DIR}/horiz-init" "$BIN_DIR/init"
 cp "${TARGET_DIR}/horiz-sh" "$BIN_DIR/sh"
+cp "${TARGET_DIR}/horiz-pkg" "$BIN_DIR/horiz-pkg"
 cp "${TARGET_DIR}/horiz-utils" "$BIN_DIR/horiz-utils"
 
 # ユーティリティのシンボリックリンク作成
+ln -sf horiz-pkg "$BIN_DIR/pkg"
 ln -sf horiz-utils "$BIN_DIR/ls"
 ln -sf horiz-utils "$BIN_DIR/cat"
 ln -sf horiz-utils "$BIN_DIR/echo"
@@ -41,6 +43,14 @@ ln -sf horiz-utils "$BIN_DIR/echo"
 if [ -d "rootfs" ]; then
     echo "[報告] rootfs テンプレートを適用中..."
     cp -r rootfs/* "$ROOTFS_DIR/"
+fi
+
+# HTTPS 通信のための CA 証明書の配置
+echo "[報告] CA 証明書を配置中..."
+mkdir -p "$ROOTFS_DIR/etc/ssl/certs"
+# ビルド環境が Debian/Ubuntu の場合、システムからコピーする。
+if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+    cp /etc/ssl/certs/ca-certificates.crt "$ROOTFS_DIR/etc/ssl/certs/"
 fi
 
 echo "[報告] Rootfs パッケージング中..."

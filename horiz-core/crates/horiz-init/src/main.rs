@@ -2,7 +2,7 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 use std::ffi::CString;
-use libc::{mount, MS_NOSUID, MS_NODEV, MS_NOEXEC};
+use libc::{mount, MS_NOSUID, MS_NODEV, MS_NOEXEC, signal, SIGCHLD, SIG_DFL, waitpid, WNOHANG};
 
 fn mount_fs(source: &str, target: &str, fstype: &str, flags: u64) {
     let c_source = CString::new(source).unwrap();
@@ -25,6 +25,26 @@ fn mount_fs(source: &str, target: &str, fstype: &str, flags: u64) {
     }
 }
 
+fn setup_network() {
+    println!("[報告] ネットワークインターフェースを初期化中...");
+    // 独自実装として、ip コマンド equivalent な操作を想定。
+    // ここでは簡略化のため Command を使用するが、将来的には netlink 等での直接操作を検討。
+    let _ = Command::new("ip").args(&["link", "set", "lo", "up"]).status();
+    println!("[報告] ループバックインターフェース (lo) を有効化。");
+}
+
+fn reap_zombies() {
+    unsafe {
+        loop {
+            let mut status = 0;
+            let pid = waitpid(-1, &mut status, WNOHANG);
+            if pid <= 0 {
+                break;
+            }
+        }
+    }
+}
+
 fn main() {
     println!("--- HorizOS Core Initializing ---");
 
@@ -34,9 +54,13 @@ fn main() {
     mount_fs("devtmpfs", "/dev", "devtmpfs", 0);
     mount_fs("tmpfs", "/tmp", "tmpfs", MS_NOSUID | MS_NODEV | MS_NOEXEC);
 
+    // 2. ネットワークセットアップ
+    setup_network();
+
     println!("[報告] システム準備完了。シェルを起動します。");
 
     loop {
+        reap_zombies();
         match Command::new("/bin/sh").spawn() {
             Ok(mut child) => {
                 match child.wait() {

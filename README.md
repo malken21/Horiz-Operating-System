@@ -11,6 +11,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
   - **crates/horiz-sh**: インタラクティブ・シェル。
   - **crates/horiz-utils**: 基本的なコマンド群（ls, cat, echo等）。
 - **rootfs/**: OS スケルトン (テンプレート)。設定ファイルやディレクトリ構造の雛形。
+  - `/home/horiz`: 一般ユーザー `horiz` のホームディレクトリ。
 - **scripts/**: 各種ビルド・自動化スクリプト。
 - **build.sh**: スクラッチビルドによる迅速な rootfs 構築・統合スクリプト。
 
@@ -19,6 +20,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
 - **Kernel**: Linux 6.19.2 (Source Built)
 - **Userland**: Horiz Core (Rust / musl Static Link)
 - **Init**: horiz-init (Rust Custom Implementation)
+- **User**: `root` (Default Execution), `horiz` (UID: 1000)
 
 ## [ビルド手順]
 
