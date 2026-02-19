@@ -179,7 +179,8 @@ fn login_prompt() -> (String, u32, u32) {
 }
 
 fn run_session(user: &str, uid: u32, gid: u32) {
-    env::set_var("USER", user);
+    // Rust 2024 requires unsafe for set_var
+    unsafe { env::set_var("USER", user); }
     log_message(LogLevel::Info, &format!("ユーザーステータスを開始: {} (UID: {}, GID: {})", user, uid, gid));
 
     loop {
