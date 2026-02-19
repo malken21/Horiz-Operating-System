@@ -1,50 +1,20 @@
 #!/bin/bash
 set -e
 
-# HorizOS Rootfs Build Script
-# Base: Alpine Linux Mini Rootfs
+# HorizOS Build Script
+# This script orchestrates the build process from scratch,
+# eliminating external base image dependencies for maximum ownership.
 
-ALPINE_VERSION="3.19.1"
 ARCH="${ARCH:-x86_64}"
 
-# アーキテクチャ名の正規化 (aarch64 -> arm64 for Alpine URL)
-ALPINE_ARCH="$ARCH"
-if [ "$ARCH" = "aarch64" ]; then
-    ALPINE_ARCH="aarch64"
-elif [ "$ARCH" = "x86_64" ]; then
-    ALPINE_ARCH="x86_64"
-fi
+echo "[報告] HorizOS スクラッチビルドプロセスを開始 (ARCH: ${ARCH})。"
 
-ROOTFS_URL="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION:0:4}/releases/${ALPINE_ARCH}/alpine-minirootfs-${ALPINE_VERSION}-${ALPINE_ARCH}.tar.gz"
+# Userland (rootfs) の構築
+# Alpine Linux などの外部ベースイメージを使用せず、horiz-core から構築する
+bash scripts/build_rootfs.sh
 
-echo "[報告] HorizOS ビルドプロセスを開始 (ARCH: ${ARCH})。"
+# カーネルのビルド（必要に応じて）
+# bash scripts/build_kernel.sh
 
-# ワークディレクトリの作成
-ROOTFS_DIR="build/rootfs"
-mkdir -p "$ROOTFS_DIR"
-cd build
+echo "[報告] 全てのビルドプロセスが完了。horizos-rootfs.tar.gz を確認せよ。"
 
-# rootfsのダウンロード
-if [ ! -f alpine-rootfs.tar.gz ]; then
-    echo "[報告] Alpine Linux mini rootfs をダウンロード中..."
-    curl -L -o alpine-rootfs.tar.gz ${ROOTFS_URL}
-fi
-
-# 解凍
-echo "[報告] rootfs を展開中..."
-cd rootfs
-tar xzf ../alpine-rootfs.tar.gz
-
-# カスタマイズ (テンプレートの適用)
-cd ../..
-if [ -d "rootfs" ]; then
-    echo "[報告] rootfs テンプレートを適用中..."
-    cp -r rootfs/* "$ROOTFS_DIR/"
-fi
-
-# パッケージング
-echo "[報告] HorizOS rootfs をパッケージング中..."
-cd "$ROOTFS_DIR"
-tar czf ../../horizos-rootfs.tar.gz .
-
-echo "[報告] ビルド完了: horizos-rootfs.tar.gz"

@@ -1,10 +1,17 @@
-# scripts/build_rootfs.sh - Builds Rust Userland and packages rootfs
+# scripts/build_rootfs.sh - Builds Rust Userland and creates a clean rootfs from scratch
 
 set -e
 
-echo "[報告] Userland (Horiz Core) ビルドプロセスを開始。"
+ARCH="${ARCH:-x86_64}"
+echo "[報告] Userland (Horiz Core) スクラッチビルドを開始。"
 
-cd horiz-core
+# ワークディレクトリの準備
+ROOTFS_DIR="build/rootfs"
+rm -rf "$ROOTFS_DIR"
+mkdir -p "$ROOTFS_DIR"
+
+# 必須ディレクトリの作成 (FHS 準拠)
+mkdir -p "$ROOTFS_DIR"/{bin,dev,etc,proc,sys,tmp,var,root}
 
 # Rustバイナリのビルド (musl ターゲットでスタティックリンク)
 RUST_TARGET="x86_64-unknown-linux-musl"
@@ -13,23 +20,14 @@ if [ "$ARCH" = "aarch64" ]; then
 fi
 
 echo "[報告] ターゲット ${RUST_TARGET} でビルドを実行。"
+cd horiz-core
 cargo build --release --target ${RUST_TARGET}
+cd ..
 
 # バイナリの配置
-cd ..
-ROOTFS_DIR="build/rootfs"
 BIN_DIR="$ROOTFS_DIR/bin"
-
-# rootfs スケルトンの用意
-mkdir -p "$ROOTFS_DIR"
-if [ -d "rootfs" ]; then
-    echo "[報告] rootfs テンプレートを適用中..."
-    cp -r rootfs/* "$ROOTFS_DIR/"
-fi
-
-mkdir -p "$BIN_DIR"
-
 TARGET_DIR="horiz-core/target/${RUST_TARGET}/release"
+
 cp "${TARGET_DIR}/horiz-init" "$BIN_DIR/init"
 cp "${TARGET_DIR}/horiz-sh" "$BIN_DIR/sh"
 cp "${TARGET_DIR}/horiz-utils" "$BIN_DIR/horiz-utils"
@@ -39,9 +37,16 @@ ln -sf horiz-utils "$BIN_DIR/ls"
 ln -sf horiz-utils "$BIN_DIR/cat"
 ln -sf horiz-utils "$BIN_DIR/echo"
 
+# rootfs スケルトン (設定ファイル等) の適用
+if [ -d "rootfs" ]; then
+    echo "[報告] rootfs テンプレートを適用中..."
+    cp -r rootfs/* "$ROOTFS_DIR/"
+fi
+
 echo "[報告] Rootfs パッケージング中..."
 cd "$ROOTFS_DIR"
 tar czf ../../horizos-rootfs.tar.gz .
 
 echo "[報告] ビルド完了: horizos-rootfs.tar.gz"
+
 
