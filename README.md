@@ -4,7 +4,7 @@
 x86_64 および aarch64 アーキテクチャをサポート。
 外部依存を一切排除した「Zero-Dependency」設計により、完全な所有権と透明性を実現。
 
-## [主要なセキュリティ機能]
+## 主要なセキュリティ機能
 
 - **特権分離 (Privilege Separation)**: `horiz-init` による適切な UID/GID への特権放棄。
 - **堅牢な暗号実装**: 独自実装の Ed25519 (Twisted Edwards curve) および SHA-256/512 による整合性検証。
@@ -13,7 +13,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
 - **原子的な配置**: `horiz-pkg` における一時ファイルと `rename` を用いた原子的なパッケージ導入 (TOCTOU 対策)。
 - **DoS 対策**: HTTP クライアントにおけるバッファサイズ制限の導入。
 
-## [ディレクトリ構造]
+## ディレクトリ構造
 
 - **horiz-core/**: Userland ロジック。システム本体の機能を実装するコア・コンポーネント。
   - **crates/horiz-init**: システム初期化・特権管理・死活監視・構造化ロギング。
@@ -24,7 +24,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
 - **scripts/**: 各種ビルド・自動化スクリプト。
 - **build.sh**: スクラッチビルドによる迅速な rootfs 構築・統合スクリプト。
 
-## [コンポーネント・特徴]
+## コンポーネント・特徴
 
 - **Kernel**: Linux 6.19.2 (Source Built)
 - **Userland**: Horiz Core (Rust / musl Static Link / Zero-Dependency)
@@ -32,7 +32,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
 - **Security**: 独自実装の SHA-256/512, Ed25519 による署名検証と整合性チェック。
 - **Logging**: `/var/log/system.log` へのタイムスタンプ付き構造化ログ出力。
 
-## [ビルド手順]
+## ビルド手順
 
 環境変数 `ARCH` (x86_64, aarch64) でターゲットを指定可能（デフォルトは x86_64）。
 
@@ -48,7 +48,7 @@ x86_64 および aarch64 アーキテクチャをサポート。
     `bash scripts/build_iso.sh`
     構築した rootfs とカーネルをパッケージングし、ブート可能な ISO イメージ (`horiz-{ARCH}.iso`) を作成。
 
-## [使用方法]
+## 使用方法
 
 1. **WSL2 / Docker**:
     `horiz-rootfs.tar.gz` をインポートして使用。
