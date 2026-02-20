@@ -111,6 +111,12 @@ jobs:
           if [ "$ARCH" = "powerpc64le" ]; then rustup target add powerpc64le-unknown-linux-musl; fi
           if [ "$ARCH" = "riscv64" ]; then rustup target add riscv64gc-unknown-linux-musl; fi
 
+      - name: Setup nightly Rust
+        if: matrix.use_nightly == true
+        run: |
+          rustup toolchain install nightly
+          rustup component add rust-src --toolchain nightly
+
       - name: Build HorizOS Rootfs
         run: |
           if [ "${{ matrix.use_nightly }}" = "true" ]; then
