@@ -94,8 +94,7 @@ jobs:
           elif [ "${{ matrix.arch }}" = "s390x" ]; then
             sudo apt-get install -y gcc-s390x-linux-gnu
           elif [ "${{ matrix.arch }}" = "mips64el" ]; then
-            # gcc-mips64el-linux-gnuabi64 is not needed when using rust-lld with muslbi64
-            echo "Using rust-lld for mips64el"
+            sudo apt-get install -y gcc-mips64el-linux-gnuabi64
           elif [ "${{ matrix.arch }}" = "riscv64" ]; then
             sudo apt-get install -y gcc-riscv64-linux-gnu
           fi
@@ -110,8 +109,6 @@ jobs:
           if [ "$ARCH" = "x86_64" ]; then rustup target add x86_64-unknown-linux-musl; fi
           if [ "$ARCH" = "aarch64" ]; then rustup target add aarch64-unknown-linux-musl; fi
           if [ "$ARCH" = "powerpc64le" ]; then rustup target add powerpc64le-unknown-linux-musl; fi
-          if [ "$ARCH" = "s390x" ]; then rustup target add s390x-unknown-linux-musl; fi
-          if [ "$ARCH" = "mips64el" ]; then rustup target add mips64el-unknown-linux-muslabi64; fi
           if [ "$ARCH" = "riscv64" ]; then rustup target add riscv64gc-unknown-linux-musl; fi
 
       - name: Setup nightly Rust
