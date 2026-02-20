@@ -141,6 +141,11 @@ pub fn verify_login(username: &str, password: &str) -> io::Result<bool> {
     let file = fs::File::open("/etc/shadow")?;
     let reader = io::BufReader::new(file);
 
+    let mut user_found = false;
+    let mut is_valid = false;
+    let mut target_salt = String::from("dummy_salt_for_timing_mitigation");
+    let mut target_hash = String::new();
+
     for line in reader.lines() {
         let line = line?;
         let parts: Vec<&str> = line.split(':').collect();
@@ -152,24 +157,29 @@ pub fn verify_login(username: &str, password: &str) -> io::Result<bool> {
             let segments: Vec<&str> = encoded_pwd.split('$').collect();
             if segments.len() < 4 { continue; }
 
-            let salt = segments[2];
-            let expected_hash = segments[3];
-            let computed_hash = hash_password(password, salt);
+            target_salt = segments[2].to_string();
+            target_hash = segments[3].to_string();
+            user_found = true;
+            break; // ユーザーを見つけたらループを抜ける
+        }
+    }
 
-            // Constant-time comparison to mitigate timing attacks
-            if computed_hash.len() != expected_hash.len() {
-                return Ok(false);
-            }
+    // ユーザーの有無に関わらず、常にハッシュ計算を実行する (定数時間)
+    let computed_hash = hash_password(password, &target_salt);
+
+    if user_found {
+        if computed_hash.len() == target_hash.len() {
             let mut res = 0u8;
             let a_bytes = computed_hash.as_bytes();
-            let b_bytes = expected_hash.as_bytes();
+            let b_bytes = target_hash.as_bytes();
             for i in 0..a_bytes.len() {
                 res |= a_bytes[i] ^ b_bytes[i];
             }
-            return Ok(res == 0);
+            is_valid = res == 0;
         }
     }
-    Ok(false)
+
+    Ok(is_valid)
 }
 
 pub fn generate_shadow_entry(password: &str, salt: &str) -> String {

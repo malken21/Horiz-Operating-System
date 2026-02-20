@@ -22,8 +22,28 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux/amd64
+            arch: x86_64
+            asset_suffix: amd64
           - os: ubuntu-24.04-arm
             platform: linux/arm64
+            arch: aarch64
+            asset_suffix: arm64
+          - os: ubuntu-latest
+            platform: linux/ppc64le
+            arch: powerpc64le
+            asset_suffix: ppc64le
+          - os: ubuntu-latest
+            platform: linux/s390x
+            arch: s390x
+            asset_suffix: s390x
+          - os: ubuntu-latest
+            platform: linux/mips64le
+            arch: mips64el
+            asset_suffix: mips64el
+          - os: ubuntu-latest
+            platform: linux/riscv64
+            arch: riscv64
+            asset_suffix: riscv64
 
     steps:
       - name: Checkout repository
@@ -31,6 +51,10 @@ jobs:
 
       - name: Lowercase IMAGE_NAME
         run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        if: matrix.platform != 'linux/amd64' && matrix.platform != 'linux/arm64'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -59,27 +83,31 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-tools xorriso grub-common mtools cpio build-essential bison flex libssl-dev libelf-dev bc
-          if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
             sudo apt-get install -y grub-pc-bin grub-efi-amd64-bin
-          elif [ "${{ matrix.platform }}" = "linux/arm64" ]; then
+          elif [ "${{ matrix.arch }}" = "aarch64" ]; then
             sudo apt-get install -y grub-efi-arm64-bin gcc-aarch64-linux-gnu
+          elif [ "${{ matrix.arch }}" = "powerpc64le" ]; then
+            sudo apt-get install -y gcc-powerpc64le-linux-gnu
+          elif [ "${{ matrix.arch }}" = "s390x" ]; then
+            sudo apt-get install -y gcc-s390x-linux-gnu
+          elif [ "${{ matrix.arch }}" = "mips64el" ]; then
+            sudo apt-get install -y gcc-mips64el-linux-gnuabi64
+          elif [ "${{ matrix.arch }}" = "riscv64" ]; then
+            sudo apt-get install -y gcc-riscv64-linux-gnu
           fi
 
       - name: Setup architecture names
-        run: |
-          if [ "${{ matrix.platform }}" = "linux/amd64" ]; then
-            echo "ARCH=x86_64" >> $GITHUB_ENV
-          elif [ "${{ matrix.platform }}" = "linux/arm64" ]; then
-            echo "ARCH=aarch64" >> $GITHUB_ENV
-          fi
+        run: echo "ARCH=${{ matrix.arch }}" >> $GITHUB_ENV
 
       - name: Add Rust target
         run: |
-          if [ "$ARCH" = "x86_64" ]; then
-            rustup target add x86_64-unknown-linux-musl
-          elif [ "$ARCH" = "aarch64" ]; then
-            rustup target add aarch64-unknown-linux-musl
-          fi
+          if [ "$ARCH" = "x86_64" ]; then rustup target add x86_64-unknown-linux-musl; fi
+          if [ "$ARCH" = "aarch64" ]; then rustup target add aarch64-unknown-linux-musl; fi
+          if [ "$ARCH" = "powerpc64le" ]; then rustup target add powerpc64le-unknown-linux-gnu; fi
+          if [ "$ARCH" = "s390x" ]; then rustup target add s390x-unknown-linux-gnu; fi
+          if [ "$ARCH" = "mips64el" ]; then rustup target add mips64el-unknown-linux-gnuabi64; fi
+          if [ "$ARCH" = "riscv64" ]; then rustup target add riscv64gc-unknown-linux-musl; fi
 
       - name: Build HorizOS Rootfs
         run: bash scripts/build_rootfs.sh
@@ -108,20 +136,22 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          name: digests-${{ matrix.asset_suffix }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
 
       - name: Rename Assets
         run: |
-          mv horiz-rootfs.tar.gz horiz-rootfs-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.tar.gz
-          mv horiz-${{ env.ARCH }}.iso horiz-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}.iso
+          mv horiz-rootfs.tar.gz horiz-rootfs-${{ matrix.asset_suffix }}.tar.gz
+          if [ -f "horiz-${{ env.ARCH }}.iso" ]; then
+            mv horiz-${{ env.ARCH }}.iso horiz-${{ matrix.asset_suffix }}.iso
+          fi
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: assets-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          name: assets-${{ matrix.asset_suffix }}
           path: |
             horiz-rootfs-*.tar.gz
             horiz-*.iso

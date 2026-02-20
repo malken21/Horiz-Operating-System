@@ -58,6 +58,7 @@ echo "[報告] ファイル権限を強化中..."
 chmod 600 "$ROOTFS_DIR/etc/shadow"
 chmod 644 "$ROOTFS_DIR/etc/passwd"
 chmod 700 "$ROOTFS_DIR/root"
+chmod 1777 "$ROOTFS_DIR/tmp"
 chmod 755 "$ROOTFS_DIR/bin"/*
 chmod 755 "$ROOTFS_DIR/etc/horiz"
 chmod 644 "$ROOTFS_DIR/etc/horiz/pubkey"

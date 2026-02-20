@@ -98,6 +98,12 @@ fn http_get(url: &str) -> io::Result<Vec<u8>> {
 
 fn main() -> io::Result<()> {
     let args = parse_args().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    
+    // パストラバーサル対策 (Path Traversal Mitigation)
+    if args.name.contains('/') || args.name.contains('\\') || args.name.contains("..") {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "[エラー] 無効なパッケージ名です (パストラバーサルの試行を検知)。"));
+    }
+
     let target_path = format!("/bin/{}", args.name);
     let tmp_path = format!("/bin/{}.tmp", args.name);
     let sig_url = format!("{}.sig", args.url);

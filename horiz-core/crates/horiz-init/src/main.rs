@@ -133,6 +133,35 @@ fn reap_zombies() {
     }
 }
 
+fn get_user_info(username: &str) -> (u32, u32) {
+    if let Ok(contents) = fs::read_to_string("/etc/passwd") {
+        for line in contents.lines() {
+            let parts: Vec<&str> = line.split(':').collect();
+            if parts.len() >= 4 && parts[0] == username {
+                if let (Ok(uid), Ok(gid)) = (parts[2].parse::<u32>(), parts[3].parse::<u32>()) {
+                    return (uid, gid);
+                }
+            }
+        }
+    }
+    if username == "root" { (0, 0) } else { (1000, 1000) }
+}
+
+fn read_password() -> String {
+    let mut term: libc::termios = unsafe { std::mem::zeroed() };
+    unsafe { libc::tcgetattr(libc::STDIN_FILENO, &mut term); }
+    let mut term_hidden = term;
+    term_hidden.c_lflag &= !libc::ECHO;
+    unsafe { libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &term_hidden); }
+    
+    let mut pass = String::new();
+    io::stdin().read_line(&mut pass).unwrap();
+    
+    unsafe { libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &term); }
+    println!();
+    pass.trim().to_string()
+}
+
 fn login_prompt() -> (String, u32, u32) {
     loop {
         println!("\n--- HorizOS Login ---");
@@ -147,23 +176,16 @@ fn login_prompt() -> (String, u32, u32) {
         print!("password: ");
         io::stdout().flush().unwrap();
         
-        // --- 簡易的なエコーバック抑制 (ゼロ依存) ---
-        // 本来は termios を使うべきだが、パスワード入力を隠す最小限の実装
-        let password = unsafe {
-            let mut pass = String::new();
-            // Note: 実際には termios を libc 経由で操作して ECHO を切るのが望ましい
-            io::stdin().read_line(&mut pass).unwrap();
-            pass.trim().to_string()
-        };
+        // libc::termiosを使用したエコーバック抑制
+        let password = read_password();
 
         match horiz_auth::verify_login(&username, &password) {
             Ok(true) => {
                 log_message(LogLevel::Info, &format!("認証成功。ユーザー: {}", username));
                 log_message(LogLevel::Audit, &format!("Successful login for user: {}", username));
                 
-                // UID/GID の取得（本来は /etc/passwd を見るべきだが、プロトタイプとしてハードコードまたは簡易判定）
-                let uid = if username == "root" { 0 } else { 1000 };
-                let gid = if username == "root" { 0 } else { 1000 };
+                // /etc/passwd からUID/GIDを取得
+                let (uid, gid) = get_user_info(&username);
                 
                 return (username, uid, gid);
             }
