@@ -42,7 +42,12 @@ esac
 
 echo "[報告] ターゲット ${RUST_TARGET} でビルドを実行。"
 cd horiz-core
-cargo build --release --target ${RUST_TARGET}
+if [ "${USE_NIGHTLY:-0}" = "1" ]; then
+    echo "[報告] Tier 3 ターゲット検出: nightly + build-std を使用。"
+    cargo +nightly build --release --target ${RUST_TARGET} -Z build-std=std,panic_abort
+else
+    cargo build --release --target ${RUST_TARGET}
+fi
 cd ..
 
 # バイナリの配置

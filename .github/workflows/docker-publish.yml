@@ -102,15 +102,24 @@ jobs:
 
       - name: Add Rust target
         run: |
+          # Tier 1/2 ターゲット: stable で事前ビルド済みstdが利用可能
           if [ "$ARCH" = "x86_64" ]; then rustup target add x86_64-unknown-linux-musl; fi
           if [ "$ARCH" = "aarch64" ]; then rustup target add aarch64-unknown-linux-musl; fi
-          if [ "$ARCH" = "powerpc64le" ]; then rustup target add powerpc64le-unknown-linux-gnu; fi
-          if [ "$ARCH" = "s390x" ]; then rustup target add s390x-unknown-linux-gnu; fi
-          if [ "$ARCH" = "mips64el" ]; then rustup target add mips64el-unknown-linux-gnuabi64; fi
-          if [ "$ARCH" = "riscv64" ]; then rustup target add riscv64gc-unknown-linux-musl; fi
+          if [ "$ARCH" = "powerpc64le" ]; then rustup target add powerpc64le-unknown-linux-musl; fi
+          if [ "$ARCH" = "s390x" ]; then rustup target add s390x-unknown-linux-musl; fi
+          # Tier 3 ターゲット: nightly + build-std が必要
+          if [ "$ARCH" = "mips64el" ] || [ "$ARCH" = "riscv64" ]; then
+            rustup toolchain install nightly
+            rustup component add rust-src --toolchain nightly
+          fi
 
       - name: Build HorizOS Rootfs
-        run: bash scripts/build_rootfs.sh
+        run: |
+          if [ "$ARCH" = "mips64el" ] || [ "$ARCH" = "riscv64" ]; then
+            USE_NIGHTLY=1 bash scripts/build_rootfs.sh
+          else
+            bash scripts/build_rootfs.sh
+          fi
 
       - name: Build HorizOS Kernel
         run: bash scripts/build_kernel.sh
