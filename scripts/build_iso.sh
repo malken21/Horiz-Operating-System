@@ -63,7 +63,13 @@ echo "[報告] xorriso を使用して ISO イメージを生成中..."
 OUTPUT_ISO="horiz-${ARCH}.iso"
 
 # GitHub Actions 環境（Ubuntu）では grub-mkrescue を使用
-# 注意: grub-pc-bin, xorriso 等が必要
-grub-mkrescue --target="${GRUB_PLATFORM}" -o "${OUTPUT_ISO}" "${ISO_DIR}"
+# --target オプションは xorriso に不正なオプションを渡すため使用しない
+# x86_64: grub-pc-bin がインストール済みのため grub-mkrescue がデフォルトで i386-pc を使用
+# aarch64: EFI 用モジュールディレクトリを明示指定
+if [ "$ARCH" = "x86_64" ]; then
+    grub-mkrescue -o "${OUTPUT_ISO}" "${ISO_DIR}" -- -as mkisofs -r
+elif [ "$ARCH" = "aarch64" ]; then
+    grub-mkrescue -d /usr/lib/grub/arm64-efi -o "${OUTPUT_ISO}" "${ISO_DIR}"
+fi
 
 echo "[報告] ISO ビルド完了: ${OUTPUT_ISO}"
