@@ -117,16 +117,11 @@ jobs:
           rustup toolchain install nightly
           rustup component add rust-src --toolchain nightly
 
-      - name: Install musl toolchain (Tier 3)
+      - name: Install Zig and cargo-zigbuild
         if: matrix.use_nightly == true
         run: |
-          if [ "${{ matrix.arch }}" = "s390x" ]; then
-            curl -L https://musl.cc/s390x-linux-musl-cross.tgz | tar xz
-            echo "$(pwd)/s390x-linux-musl-cross/bin" >> $GITHUB_PATH
-          elif [ "${{ matrix.arch }}" = "mips64el" ]; then
-            curl -L https://musl.cc/mips64el-linux-musl-cross.tgz | tar xz
-            echo "$(pwd)/mips64el-linux-musl-cross/bin" >> $GITHUB_PATH
-          fi
+          sudo snap install zig --classic
+          pip3 install cargo-zigbuild
 
       - name: Build HorizOS Rootfs
         run: |
