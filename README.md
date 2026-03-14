@@ -1,5 +1,7 @@
 # HorizOS
 
+かふぇ ほらいずん の Discord サーバーの Bot を動かしている OS
+
 ## ホライズちゃん かわいい
 
 ![horiz 1](assets/images/horiz%201.webp)
