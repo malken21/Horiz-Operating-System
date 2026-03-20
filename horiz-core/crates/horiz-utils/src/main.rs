@@ -25,6 +25,11 @@ fn main() {
         "echo" => {
             horiz_utils::echo(args[1..].to_vec());
         }
+        "chmod" => {
+            if let Err(e) = horiz_utils::chmod(args[1..].to_vec()) {
+                eprintln!("chmod: {}", e);
+            }
+        }
         _ => eprintln!("Unknown utility: {}", cmd),
     }
 }
