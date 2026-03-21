@@ -3,10 +3,12 @@ name: Docker Publish
 on:
   push:
     tags: [ 'v*.*.*' ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -136,6 +138,8 @@ jobs:
           fi
 
       - name: Build HorizOS Kernel
+        env:
+          NJOBS: 2
         run: bash scripts/build_kernel.sh
 
       - name: Build HorizOS ISO

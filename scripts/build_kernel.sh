@@ -82,6 +82,6 @@ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} ${KCONFIG}
 
 # ビルド
 echo "カーネルをコンパイル中..."
-make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j$(nproc)
+make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} -j${NJOBS:-$(nproc)}
 
 echo "ビルド完了: ${KERNEL_IMAGE}"
