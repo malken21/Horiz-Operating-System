@@ -34,3 +34,12 @@ cat /var/log/system.log /var/log/audit.log
 echo "Hello HorizOS World!"
 echo $USER
 ```
+
+### 4. `chmod` (ファイルパーミッションの変更)
+
+8進数形式の指定に基づいて、ファイルやディレクトリのアクセス権限を変更する。Unix 標準の `chmod` と同様に機能し、複数のパスを一度に処理することも可能である。
+
+```bash
+chmod 755 /usr/bin/horiz-init
+chmod 644 /etc/passwd /etc/group
+```
